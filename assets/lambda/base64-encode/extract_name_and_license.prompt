@@ -1,0 +1,3 @@
+What is the first name, last name and license id in this file? 
+Return in the following format: 
+First Name: <first name>, Last Name: <last name>, License ID: <license id>

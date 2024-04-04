@@ -1,0 +1,117 @@
+{
+    "Comment": "A description of my state machine",
+    "StartAt": "Base64 Image Encoding",
+    "States": {
+      "Base64 Image Encoding": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "OutputPath": "$.Payload",
+        "Parameters": {
+          "Payload.$": "$",
+          "FunctionName": ""
+        },
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "Lambda.ServiceException",
+              "Lambda.AWSLambdaException",
+              "Lambda.SdkClientException",
+              "Lambda.TooManyRequestsException"
+            ],
+            "IntervalSeconds": 1,
+            "MaxAttempts": 3,
+            "BackoffRate": 2
+          }
+        ],
+        "Next": "Classification",
+        "InputPath": "$.detail"
+      },
+      "Classification": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::bedrock:invokeModel",
+        "Parameters": {
+          "ModelId": "",
+          "Input": {
+            "S3Uri": ""
+          },
+          "ContentType": "application/json",
+          "Accept": "application/json"
+        },
+        "Next": "Choice (YES or NO)",
+        "ResultPath": "$.result"
+      },
+      "Choice (YES or NO)": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Not": {
+              "Variable": "$.result.Body.content[0].text",
+              "StringMatches": "YES"
+            },
+            "Comment": "It is not a driving license",
+            "Next": "Fail"
+          }
+        ],
+        "Default": "Extract Name and License #"
+      },
+      "Extract Name and License #": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::bedrock:invokeModel",
+        "Parameters": {
+          "ModelId": "",
+          "Input": {
+            "S3Uri": ""
+          },
+          "ContentType": "application/json",
+          "Accept": "application/json"
+        },
+        "Next": "Call DMV with License Info"
+      },
+      "Call DMV with License Info": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "OutputPath": "$.Payload",
+        "Parameters": {
+          "FunctionName": "",
+          "Payload.$": "$"
+        },
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "Lambda.ServiceException",
+              "Lambda.AWSLambdaException",
+              "Lambda.SdkClientException",
+              "Lambda.TooManyRequestsException"
+            ],
+            "IntervalSeconds": 1,
+            "MaxAttempts": 3,
+            "BackoffRate": 2
+          }
+        ],
+        "Next": "Check against Underwriting Manual"
+      },
+      "Check against Underwriting Manual": {
+        "Type": "Task",
+        "Next": "Success",
+        "Parameters": {
+          "Input": {
+            "Text.$": "$.body"
+          },
+          "RetrieveAndGenerateConfiguration": {
+            "KnowledgeBaseConfiguration": {
+              "KnowledgeBaseId": "",
+              "ModelArn": ""
+            },
+            "Type": "KNOWLEDGE_BASE"
+          }
+        },
+        "Resource": "arn:aws:states:::aws-sdk:bedrockagentruntime:retrieveAndGenerate"
+      },
+      "Fail": {
+        "Type": "Fail"
+      },
+      "Success": {
+        "Type": "Succeed"
+      }
+    }
+  }
