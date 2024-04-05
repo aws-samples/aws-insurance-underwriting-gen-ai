@@ -1,12 +1,11 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import path = require('path');
 import { KnowledgeBaseConstruct } from './constructs/bedrock-kb-construct';
 import { EventBridgeConstruct } from './constructs/event-bridge-construct';
 import { StateMachineConstruct } from './constructs/state-machine-construct';
 import { LambdaConstruct } from './constructs/lambda-construct';
 import { S3BucketConstruct } from './constructs/s3-construct';
-import { OpenSearchCollectionConstruct } from './constructs/opensearch-construct';
+import path = require('path');
 
 
 enum ModelType {
@@ -38,7 +37,6 @@ export interface AppProps extends cdk.StackProps {
 const defaultProps: Partial<AppProps> = {};
 
 export class AppStack extends cdk.Stack {
-  private readonly embeddingsModelArn: string;
   private readonly classificationModelARN: string;
   private readonly retrieveAndGenerateModelARN: string;
   private readonly nameAndLicenceExtractionModelARN: string;
@@ -51,7 +49,6 @@ export class AppStack extends cdk.Stack {
     const awsRegion = cdk.Stack.of(this).region;
     const baseBedrockModelArn = `arn:aws:bedrock:${awsRegion}::foundation-model`;
 
-    this.embeddingsModelArn = `${baseBedrockModelArn}/${ModelType.COHERE_EMBED_ENGLISH_V3}`;
     this.classificationModelARN = `${baseBedrockModelArn}/${ModelType.ANTHROPIC_CLAUDE_V3_HAIKU}`;
     this.retrieveAndGenerateModelARN = `${baseBedrockModelArn}/${ModelType.ANTHROPIC_CLAUDE_V3_SONNET}`;
     this.nameAndLicenceExtractionModelARN = `${baseBedrockModelArn}/${ModelType.ANTHROPIC_CLAUDE_V3_HAIKU}`;
@@ -64,7 +61,9 @@ export class AppStack extends cdk.Stack {
     });
 
     new cdk.aws_s3_deployment.BucketDeployment(this, 'UploadUnderwritingManual', {
-      sources: [cdk.aws_s3_deployment.Source.asset(path.join(__dirname, '../assets/underwriting-manual'))],
+      sources: [cdk.aws_s3_deployment.Source.asset(path.join(__dirname, '../assets/underwriting-manual'), {
+        exclude: ["**/.gitkeep"]
+      })],
       destinationBucket: underwritingManualBucket.bucket,
       retainOnDelete: false,
     });
@@ -79,78 +78,8 @@ export class AppStack extends cdk.Stack {
       enableEventBridge: false,
     });
 
-    const knowledgeBaseRole = new cdk.aws_iam.Role(this, 'BedrockKnowledgeBaseRole', {
-      roleName: `AmazonBedrockExecutionRoleForKnowledgeBase_${props.randomPrefix}`,
-      assumedBy: new cdk.aws_iam.ServicePrincipal('bedrock.amazonaws.com'),
-      inlinePolicies: {
-        BedrockKnowledgeBasePolicy: new cdk.aws_iam.PolicyDocument({
-          statements: [
-            new cdk.aws_iam.PolicyStatement({
-              effect: cdk.aws_iam.Effect.ALLOW,
-              actions: [
-                's3:GetObject', 
-                's3:ListBucket'
-              ],
-              resources: [
-                cdk.Stack.of(this).formatArn({
-                  service: 's3',
-                  resource: underwritingManualBucket.bucket.bucketName,
-                  region: '',
-                  account: '',
-                }),
-                cdk.Stack.of(this).formatArn({
-                  service: 's3',
-                  resource: `${underwritingManualBucket.bucket.bucketName}/*`,
-                  region: '',
-                  account: '',
-                }),
-              ],
-              conditions: {
-                StringEquals: {
-                  'aws:PrincipalAccount': this.account,
-                },
-              },
-            }),
-            new cdk.aws_iam.PolicyStatement({
-              effect: cdk.aws_iam.Effect.ALLOW,
-              actions: [
-                'bedrock:ListFoundationModels', 
-                'bedrock:ListCustomModels'
-              ],
-              resources: ['*'],
-            }),
-            new cdk.aws_iam.PolicyStatement({
-              effect: cdk.aws_iam.Effect.ALLOW,
-              actions: ['bedrock:InvokeModel'],
-              resources: [
-                this.embeddingsModelArn,
-                this.classificationModelARN,
-                this.retrieveAndGenerateModelARN,
-                this.nameAndLicenceExtractionModelARN,
-              ],
-            }),
-          ],
-        }),
-      },
-    });
-
-    const customResourceRole = new cdk.aws_iam.Role(this, 'CustomResourceRole', {
-      assumedBy: new cdk.aws_iam.ServicePrincipal('lambda.amazonaws.com'),
-      managedPolicies: [cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
-    });
-
-    const collectionConstruct = new OpenSearchCollectionConstruct(this, 'OpenSearchCollection', {
-      knowledgeBaseRole: knowledgeBaseRole,
-      customResourceRole: customResourceRole,
-      collectionName: 'underwriting-manual-collection',
-    });
-
     const knowledgeBase = new KnowledgeBaseConstruct(this, 'KnowledgeBase', {
-      embeddingsModelArn: this.embeddingsModelArn,
-      knowledgeBaseRole: knowledgeBaseRole,
-      collection: collectionConstruct.collection,
       bucket: underwritingManualBucket.bucket,
-      customResourceRole: customResourceRole,
     });
 
     const base64EncodeLambda = new LambdaConstruct(this, 'Base64EncodeLambda', {
@@ -221,19 +150,6 @@ export class AppStack extends cdk.Stack {
       bucketName: `underwriting-document-bucket-${props.randomPrefix}`
     });
 
-    // Allow Lambda (custom resource) access to OpenSearch data plane
-    const allowAccessToCollectionDataPlanePolicy = new cdk.aws_iam.Policy(this, 'CustomResourcePolicy', {
-      statements: [
-        new cdk.aws_iam.PolicyStatement({
-          resources: [collectionConstruct.collection.attrArn],
-          actions: ['aoss:APIAccessAll'],
-        }),
-      ],
-    });
-    allowAccessToCollectionDataPlanePolicy.attachToRole(customResourceRole);
-
-    knowledgeBase.node.addDependency(allowAccessToCollectionDataPlanePolicy);
-    knowledgeBase.node.addDependency(collectionConstruct);
     stateMachine.node.addDependency(base64EncodeLambda);
     stateMachine.node.addDependency(dmvAPICallLambda);
     stateMachine.node.addDependency(knowledgeBase);
@@ -249,9 +165,9 @@ export class AppStack extends cdk.Stack {
       description: 'Data Source ID',
     });
 
-    new cdk.CfnOutput(this, 'UnderwritingBucketName', {
-      value: underwritingDocumentBucket.bucket.bucketName,
-      description: 'Underwriting Document Upload Bucket Name',
+    new cdk.CfnOutput(this, 'UnderwritingBucketURL', {
+      value: `https://s3.console.aws.amazon.com/s3/buckets/${underwritingDocumentBucket.bucket.bucketName}`,
+      description: 'URL of the Underwriting Document Upload Bucket',
     });
   }
 }

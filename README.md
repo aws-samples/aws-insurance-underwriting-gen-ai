@@ -50,10 +50,10 @@ chmod +x deploy.sh && ./deploy.sh
 It will take somewhere from 7 to 10 minutes for the infrastructure to be deployed depending on your machine.
 
 > [!IMPORTANT]
-> Note S3 Bucket name from the output. This is the bucket where we are going to upload a document (driving license in our example). It will be in the following format:
+> Note S3 Bucket url from the output. This is the bucket where we are going to upload a document (driving license in our example). It will be in the following format:
 
 ```
-GenAIUnderwritingValidationStack.UnderwritingBucketName = ...
+GenAIUnderwritingValidationStack.UnderwritingBucketURL = ...
 ```
 
 > [!CAUTION]
