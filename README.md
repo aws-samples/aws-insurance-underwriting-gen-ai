@@ -21,11 +21,11 @@ This repository is an addition to [this]() AWS blog post.
 
 ## Prerequisites
 
-Deployment has been tested on MacOS, Windows and Linux machines. Installation guide assumes you have AWS account and Administrator Access to provision all the resources. Make sure you have access to `Anthropic's Claude 2.1 and Claude 3 Haiku models` on Amazon Bedrock and your credentials stored in `~/.aws/credentials` (MacOS) or `C:\Users\username\.aws\credentials` (Windows).
+Deployment has been tested on MacOS and Linux machines. Installation guide assumes you have AWS account and Administrator Access to provision all the resources. Make sure you have access to `Anthropic's Claude 3 models` in Amazon Bedrock and your credentials stored in `~/.aws/credentials` (MacOS).
 
 =============
 
-- [Amazon Bedrock Claude](https://www.aboutamazon.com/news/aws/amazon-bedrock-anthropic-ai-claude-3) - Access to the Anthropic's Claude 2.1 and Claude 3 Haiku models on Amazon Bedrock
+- [Amazon Bedrock Claude](https://www.aboutamazon.com/news/aws/amazon-bedrock-anthropic-ai-claude-3) - Access to the Anthropic's Claude 3 models on Amazon Bedrock
 - [node](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) >= 20.0.0
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) >= 2.15.0
 - [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html) >= 2.133.0
@@ -47,7 +47,7 @@ Deploy the infrastructure using the following command:
 chmod +x deploy.sh && ./deploy.sh
 ```
 
-It will take somewhere from 7 to 10 minutes for the infrastructure to be deployed depending on your machine.
+It will take somewhere around 7 to 10 minutes for the infrastructure to be deployed depending on your machine.
 
 > [!IMPORTANT]
 > Note S3 Bucket url from the output. This is the bucket where we are going to upload a document (driving license in our example). It will be in the following format:
