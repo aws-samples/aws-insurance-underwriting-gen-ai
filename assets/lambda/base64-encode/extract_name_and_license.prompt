@@ -1,3 +1,7 @@
-What is the first name, last name and license id in this file? 
-Return in the following format: 
+Your task is to extract the following information from the image:
+- First name
+- Last name
+- License ID
+
+Provide the extracted information in the following format:
 First Name: <first name>, Last Name: <last name>, License ID: <license id>

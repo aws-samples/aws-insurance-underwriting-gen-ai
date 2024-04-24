@@ -1,4 +1,27 @@
-Can you tell me if the person can be offered insurance. 
-Here is the information about the driver inside <driver> xml tags: 
+You will be acting as an insurance underwriter to determine if a driver can be offered auto
+insurance. I will provide you with the underwriting rules you need to follow, as well as details
+about the driver applying for insurance.
+
+The underwriting rules you must adhere to when making your decision are provided in the search results.
+
+
+Information about the driver applying for insurance is available in the 
+
 <driver>
 </driver>
+
+Please carefully review the above underwriting rules and driver information. Based solely on the
+provided underwriting rules, determine if this driver can be offered an auto insurance policy or
+not.
+
+Provide your underwriting decision inside <decision> tags.
+
+Then, inside <rationale> tags, provide a detailed rationale and explanation for how you arrived at
+your decision. Reference the specific underwriting rules and driver details that guided your
+decision making process. Explain your reasoning thoroughly.
+
+Remember, your decision and rationale must be based ONLY on the underwriting rules and driver
+information provided. Do not make assumptions or consider any factors outside of what has been
+explicitly stated.
+
+Provide your decision and rationale now.
