@@ -21,9 +21,9 @@ VIOLATIONS = [
     "distracted_driving"
 ]
 
-def generate_random_dmv_record(license_number):
+def generate_random_dmv_record(license_id):
     # Future update - make API call against DMV database to get real data
-    # make_api_call(license_number)
+    # make_api_call(license_id)
     num_violations = random.randint(0, 3)
     violations = random.sample(VIOLATIONS, num_violations)
     if len(violations) == 0:

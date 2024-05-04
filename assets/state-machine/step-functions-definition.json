@@ -52,28 +52,101 @@
             "Next": "Fail"
           }
         ],
-        "Default": "Extract Name and License #"
+        "Default": "Parallel"
       },
-      "Extract Name and License #": {
-        "Type": "Task",
-        "Resource": "arn:aws:states:::bedrock:invokeModel",
-        "Parameters": {
-          "ModelId": "",
-          "Input": {
-            "S3Uri": ""
+      "Parallel": {
+        "Type": "Parallel",
+        "Next": "Generate Final Prompt",
+        "Branches": [
+          {
+            "StartAt": "Extract Name and License #",
+            "States": {
+              "Extract Name and License #": {
+                "Parameters": {
+                  "Accept": "application/json",
+                  "ContentType": "application/json",
+                  "Input": {
+                    "S3Uri": ""
+                  },
+                  "ModelId": ""
+                },
+                "Resource": "arn:aws:states:::bedrock:invokeModel",
+                "Type": "Task",
+                "Next": "Call DMV with License Info"
+              },
+              "Call DMV with License Info": {
+                "OutputPath": "$.Payload",
+                "Parameters": {
+                  "FunctionName": "",
+                  "Payload.$": "$"
+                },
+                "Resource": "arn:aws:states:::lambda:invoke",
+                "Retry": [
+                  {
+                    "BackoffRate": 2,
+                    "ErrorEquals": [
+                      "Lambda.ServiceException",
+                      "Lambda.AWSLambdaException",
+                      "Lambda.SdkClientException",
+                      "Lambda.TooManyRequestsException"
+                    ],
+                    "IntervalSeconds": 1,
+                    "MaxAttempts": 3
+                  }
+                ],
+                "Type": "Task",
+                "End": true
+              }
+            }
           },
-          "ContentType": "application/json",
-          "Accept": "application/json"
-        },
-        "Next": "Call DMV with License Info"
+          {
+            "StartAt": "Retrieve information from Underwriting Manual",
+            "States": {
+              "Retrieve information from Underwriting Manual": {
+                "Type": "Task",
+                "Parameters": {
+                  "KnowledgeBaseId": "",
+                  "RetrievalQuery": {
+                    "Text": ""
+                  }
+                },
+                "Resource": "arn:aws:states:::aws-sdk:bedrockagentruntime:retrieve",
+                "Next": "Combine Retrieved Information"
+              },
+              "Combine Retrieved Information": {
+                "Type": "Task",
+                "Resource": "arn:aws:states:::lambda:invoke",
+                "OutputPath": "$.Payload",
+                "Parameters": {
+                  "FunctionName": "",
+                  "Payload.$": "$"
+                },
+                "Retry": [
+                  {
+                    "ErrorEquals": [
+                      "Lambda.ServiceException",
+                      "Lambda.AWSLambdaException",
+                      "Lambda.SdkClientException",
+                      "Lambda.TooManyRequestsException"
+                    ],
+                    "IntervalSeconds": 1,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2
+                  }
+                ],
+                "End": true
+              }
+            }
+          }
+        ]
       },
-      "Call DMV with License Info": {
+      "Generate Final Prompt": {
         "Type": "Task",
         "Resource": "arn:aws:states:::lambda:invoke",
         "OutputPath": "$.Payload",
         "Parameters": {
-          "FunctionName": "",
-          "Payload.$": "$"
+          "Payload.$": "$",
+          "FunctionName": ""
         },
         "Retry": [
           {
@@ -88,24 +161,20 @@
             "BackoffRate": 2
           }
         ],
-        "Next": "Check against Underwriting Manual"
+        "Next": "Get Final Result from Bedrock"
       },
-      "Check against Underwriting Manual": {
-        "Type": "Task",
-        "Next": "Success",
+      "Get Final Result from Bedrock": {
         "Parameters": {
+          "Accept": "application/json",
+          "ContentType": "application/json",
           "Input": {
-            "Text.$": "$.body"
+            "S3Uri": ""
           },
-          "RetrieveAndGenerateConfiguration": {
-            "KnowledgeBaseConfiguration": {
-              "KnowledgeBaseId": "",
-              "ModelArn": ""
-            },
-            "Type": "KNOWLEDGE_BASE"
-          }
+          "ModelId": ""
         },
-        "Resource": "arn:aws:states:::aws-sdk:bedrockagentruntime:retrieveAndGenerate"
+        "Resource": "arn:aws:states:::bedrock:invokeModel",
+        "Type": "Task",
+        "Next": "Success"
       },
       "Fail": {
         "Type": "Fail"

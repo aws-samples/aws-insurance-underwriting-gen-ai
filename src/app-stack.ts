@@ -38,10 +38,11 @@ const defaultProps: Partial<AppProps> = {};
 
 export class AppStack extends cdk.Stack {
   private readonly classificationModelARN: string;
-  private readonly retrieveAndGenerateModelARN: string;
+  private readonly finalResultModelARN: string;
   private readonly nameAndLicenceExtractionModelARN: string;
   private readonly inputS3BucketClassificationKey: string;
   private readonly inputS3BucketExtractNameAndLicenseKey: string;
+  private readonly inputS3BucketFinalPromptKey: string;
 
   constructor(scope: Construct, name: string, props: AppProps) {
     super(scope, name, props);
@@ -50,10 +51,11 @@ export class AppStack extends cdk.Stack {
     const baseBedrockModelArn = `arn:aws:bedrock:${awsRegion}::foundation-model`;
 
     this.classificationModelARN = `${baseBedrockModelArn}/${ModelType.ANTHROPIC_CLAUDE_V3_HAIKU}`;
-    this.retrieveAndGenerateModelARN = `${baseBedrockModelArn}/${ModelType.ANTHROPIC_CLAUDE_V3_SONNET}`;
     this.nameAndLicenceExtractionModelARN = `${baseBedrockModelArn}/${ModelType.ANTHROPIC_CLAUDE_V3_HAIKU}`;
+    this.finalResultModelARN = `${baseBedrockModelArn}/${ModelType.ANTHROPIC_CLAUDE_V3_SONNET}`;
     this.inputS3BucketClassificationKey = 'classification_input.json';
     this.inputS3BucketExtractNameAndLicenseKey = 'extract_name_and_license_input.json';
+    this.inputS3BucketFinalPromptKey = 'final_prompt_input.json';
 
     const underwritingManualBucket = new S3BucketConstruct(this, `UnderwritingManualS3Bucket-${props.randomPrefix}`, {
       bucketName: `underwriting-manual-bucket-${props.randomPrefix}`,
@@ -128,7 +130,60 @@ export class AppStack extends cdk.Stack {
       functionHandler: 'dmv_api_call',
       iamRole: new cdk.aws_iam.Role(this, 'DmvAPICallLambdaRole', {
         assumedBy: new cdk.aws_iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+        managedPolicies: [
+          cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
+        ],
+      }),
+    });
+
+    const combineRetrievedInformationLambda = new LambdaConstruct(this, 'CombineRetrievedInformationLambda', {
+      functionName: `CombineRetrievedInformationLambda-${props.randomPrefix}`,
+      assetCode: cdk.aws_lambda.Code.fromAsset(path.join(__dirname, '../assets/lambda/combine-retrieved-information')),
+      functionHandler: 'combine_retrieved_information',
+      iamRole: new cdk.aws_iam.Role(this, 'CombineRetrievedInformationLambdaRole', {
+        assumedBy: new cdk.aws_iam.ServicePrincipal('lambda.amazonaws.com'),
+        managedPolicies: [
+          cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
+        ],
+      }),
+    });
+
+    const generateFinalPromptLambda = new LambdaConstruct(this, 'GenerateFinalPromptLambda', {
+      functionName: `GenerateFinalPromptLambda-${props.randomPrefix}`,
+      assetCode: cdk.aws_lambda.Code.fromAsset(path.join(__dirname, '../assets/lambda/generate-final-prompt')),
+      functionHandler: 'generate_final_prompt',
+      inputS3BucketName: stepFunctionInputBucket.bucket.bucketName,
+      inputS3BucketFinalPromptKey: this.inputS3BucketFinalPromptKey,
+      iamRole: new cdk.aws_iam.Role(this, 'GenerateFinalPromptLambdaRole', {
+        assumedBy: new cdk.aws_iam.ServicePrincipal('lambda.amazonaws.com'),
+        inlinePolicies: {
+          lambdaInvokePolicy: new cdk.aws_iam.PolicyDocument({
+            statements: [
+              new cdk.aws_iam.PolicyStatement({
+                actions: [
+                  'logs:CreateLogGroup',
+                  'logs:CreateLogStream',
+                  'logs:PutLogEvents'
+                ],
+                resources: ['*'],
+              }),
+              new cdk.aws_iam.PolicyStatement({
+                actions: [
+                  's3:ListBucket',
+                  's3:PutObject',
+                  's3:GetObject',
+                  's3:GetObjectVersion',
+                ],
+                resources: [
+                  `arn:aws:s3:::${stepFunctionInputBucket.bucket.bucketName}`,
+                  `arn:aws:s3:::${stepFunctionInputBucket.bucket.bucketName}/*`,
+                  `arn:aws:s3:::${underwritingDocumentBucket.bucket.bucketName}`,
+                  `arn:aws:s3:::${underwritingDocumentBucket.bucket.bucketName}/*`
+                ]
+              }),
+            ],
+          }),
+        },
       }),
     });
 
@@ -137,11 +192,14 @@ export class AppStack extends cdk.Stack {
       inputS3BucketName: stepFunctionInputBucket.bucket.bucketName,
       inputS3BucketClassificationKey: this.inputS3BucketClassificationKey,
       inputS3BucketExtractNameAndLicenseKey: this.inputS3BucketExtractNameAndLicenseKey,
+      inputS3BucketFinalPromptKey: this.inputS3BucketFinalPromptKey,
       classificationModelARN: this.classificationModelARN,
       nameAndLicenceExtractionModelARN: this.nameAndLicenceExtractionModelARN,
-      retrieveAndGenerateModelARN: this.retrieveAndGenerateModelARN,
+      finalResultModelARN: this.finalResultModelARN,
       base64EncodeLambdaArn: base64EncodeLambda.functionArn,
       dmvAPICallLambdaArn: dmvAPICallLambda.functionArn,
+      combineRetrievedInformationLambdaArn: combineRetrievedInformationLambda.functionArn,
+      generateFinalPromptLambdaArn: generateFinalPromptLambda.functionArn,
       awsRegion: awsRegion
     });
 

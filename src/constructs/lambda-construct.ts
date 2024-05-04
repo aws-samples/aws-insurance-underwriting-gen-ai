@@ -10,6 +10,7 @@ export interface LambdaProps extends cdk.StackProps {
     readonly inputS3BucketName?: string;
     readonly inputS3BucketClassificationKey?: string;
     readonly inputS3BucketExtractNameAndLicenseKey?: string;
+    readonly inputS3BucketFinalPromptKey?: string;
 }
 const defaultProps: Partial<LambdaProps> = {};
 
@@ -30,10 +31,18 @@ export class LambdaConstruct extends Construct {
         environment: {
           ...(props.inputS3BucketName ? 
             { INPUT_S3_BUCKET_NAME: props.inputS3BucketName } : {}),
+
           ...(props.inputS3BucketClassificationKey ? 
-            { INPUT_S3_BUCKET_CLASSIFICATION_KEY: props.inputS3BucketClassificationKey } : {}),
+            { INPUT_S3_BUCKET_CLASSIFICATION_KEY: 
+              props.inputS3BucketClassificationKey } : {}),
+
           ...(props.inputS3BucketExtractNameAndLicenseKey ? 
-            { INPUT_S3_BUCKET_EXTRACT_NAME_AND_LICENSE_KEY: props.inputS3BucketExtractNameAndLicenseKey } : {}),
+            { INPUT_S3_BUCKET_EXTRACT_NAME_AND_LICENSE_KEY: 
+              props.inputS3BucketExtractNameAndLicenseKey } : {}),
+
+          ...(props.inputS3BucketFinalPromptKey ?
+            { INPUT_S3_BUCKET_FINAL_PROMPT_KEY: 
+              props.inputS3BucketFinalPromptKey } : {}),
         },
         role: props.iamRole,
     });

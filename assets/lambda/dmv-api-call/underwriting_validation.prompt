@@ -2,8 +2,10 @@ You will be acting as an insurance underwriter to determine if a driver can be o
 insurance. I will provide you with the underwriting rules you need to follow, as well as details
 about the driver applying for insurance.
 
-The underwriting rules you must adhere to when making your decision are provided in the search results.
+The underwriting rules you must adhere to when making your decision are provided in the 
 
+<rules>
+</rules>
 
 Information about the driver applying for insurance is available in the 
 

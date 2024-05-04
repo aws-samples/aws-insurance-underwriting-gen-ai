@@ -9,9 +9,15 @@ logger.setLevel(logging.INFO)
 
 s3_client = boto3.client(service_name='s3')
 
-INPUT_S3_BUCKET_NAME = os.environ['INPUT_S3_BUCKET_NAME']
-INPUT_S3_BUCKET_CLASSIFICATION_KEY = os.environ['INPUT_S3_BUCKET_CLASSIFICATION_KEY']
-INPUT_S3_BUCKET_EXTRACT_NAME_AND_LICENSE_KEY = os.environ['INPUT_S3_BUCKET_EXTRACT_NAME_AND_LICENSE_KEY']
+INPUT_S3_BUCKET_NAME = os.environ[
+    'INPUT_S3_BUCKET_NAME'
+]
+INPUT_S3_BUCKET_CLASSIFICATION_KEY = os.environ[
+    'INPUT_S3_BUCKET_CLASSIFICATION_KEY'
+]
+INPUT_S3_BUCKET_EXTRACT_NAME_AND_LICENSE_KEY = os.environ[
+    'INPUT_S3_BUCKET_EXTRACT_NAME_AND_LICENSE_KEY'
+]
 
 with open('classification.prompt') as f:
     CLASSIFICATION_PROMPT = f.read()
@@ -19,7 +25,8 @@ with open('classification.prompt') as f:
 with open('extract_name_and_license.prompt') as f:
     EXTRACT_NAME_AND_LICENSE_PROMPT = f.read()
 
-def construct_payload_and_upload(prompt, base64_data, bucket_name, key):
+
+def construct_invoke_model_payload_and_upload(prompt, base64_data):
     payload = {
         "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": 20000,
@@ -44,12 +51,16 @@ def construct_payload_and_upload(prompt, base64_data, bucket_name, key):
         ]
     }
 
+    return json.dumps(payload)
+
+
+def upload_to_s3_bucket(bucket_name, key, data):
     try:
-        payload_json = json.dumps(payload)
-        s3_client.put_object(Body=payload_json, Bucket=bucket_name, Key=key)
-        logger.info('Payload uploaded successfully to %s/%s', bucket_name, key)
+        s3_client.put_object(Body=data, Bucket=bucket_name, Key=key)
+        logger.info('Data uploaded successfully to %s/%s', bucket_name, key)
     except Exception as e:
-        logger.error('Error occurred while uploading payload: %s', e)
+        logger.error('Error occurred while uploading data: %s', e)
+        
 
 def lambda_handler(event, context):
     try:
@@ -69,17 +80,26 @@ def lambda_handler(event, context):
                 'body': 'FAILURE'
             }
 
-        construct_payload_and_upload(
+        classification_prompt = construct_invoke_model_payload_and_upload(
             prompt=CLASSIFICATION_PROMPT, 
-            base64_data=base64_data, 
-            bucket_name=INPUT_S3_BUCKET_NAME, 
-            key=INPUT_S3_BUCKET_CLASSIFICATION_KEY
+            base64_data=base64_data
         )
-        construct_payload_and_upload(
+
+        extract_name_and_license_prompt = construct_invoke_model_payload_and_upload(
             prompt=EXTRACT_NAME_AND_LICENSE_PROMPT, 
-            base64_data=base64_data, 
+            base64_data=base64_data
+        )
+
+        upload_to_s3_bucket(
             bucket_name=INPUT_S3_BUCKET_NAME, 
-            key=INPUT_S3_BUCKET_EXTRACT_NAME_AND_LICENSE_KEY
+            key=INPUT_S3_BUCKET_CLASSIFICATION_KEY,
+            data=classification_prompt
+        )
+
+        upload_to_s3_bucket(
+            bucket_name=INPUT_S3_BUCKET_NAME, 
+            key=INPUT_S3_BUCKET_EXTRACT_NAME_AND_LICENSE_KEY,
+            data=extract_name_and_license_prompt
         )
 
         logger.info('Payloads uploaded successfully')
