@@ -17,7 +17,7 @@ This repository is an addition to [this]() AWS blog post.
 
 ## Architecture
 
-![AWS Architecture)](https://github.com/maxtybar/gen-ai-underwriting-validation/assets/61300968/e942a393-7a6c-442b-91a8-764485391bd3)
+![AWS Architecture](https://github.com/aws-samples/aws-insurance-underwriting-gen-ai/assets/163901554/1d351802-9030-4286-a2c5-5583d5b415bd)
 
 ## Prerequisites
 
