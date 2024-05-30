@@ -36,7 +36,7 @@ Deployment has been tested on MacOS and Linux machines. Installation guide assum
 Clone current repository:
 
 ```
-git clone https://github.com/maxtybar/gen-ai-underwriting-validation.git
+git clone https://github.com/aws-samples/aws-insurance-underwriting-gen-ai.git
 ```
 
 Navigate to the cloned repository in your terminal/shell. All of the commands are to be executed from the root folder.
