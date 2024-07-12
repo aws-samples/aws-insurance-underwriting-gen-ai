@@ -48,6 +48,7 @@ export class AppStack extends cdk.Stack {
     super(scope, name, props);
 
     const awsRegion = cdk.Stack.of(this).region;
+    const awsAccountId = cdk.Stack.of(this).account;
     const baseBedrockModelArn = `arn:aws:bedrock:${awsRegion}::foundation-model`;
 
     this.classificationModelARN = `${baseBedrockModelArn}/${ModelType.ANTHROPIC_CLAUDE_V3_HAIKU}`;
@@ -99,10 +100,19 @@ export class AppStack extends cdk.Stack {
               new cdk.aws_iam.PolicyStatement({
                 actions: [
                   'logs:CreateLogGroup',
+                ],
+                resources: [
+                  `arn:aws:logs:${awsRegion}:${awsAccountId}:*`
+                ],
+              }),
+              new cdk.aws_iam.PolicyStatement({
+                actions: [
                   'logs:CreateLogStream',
                   'logs:PutLogEvents'
                 ],
-                resources: ['*'],
+                resources: [
+                  `arn:aws:logs:${awsRegion}:${awsAccountId}:log-group:/aws/lambda/Base64EncodeLambda-${props.randomPrefix}:*`
+                ],
               }),
               new cdk.aws_iam.PolicyStatement({
                 actions: [
@@ -162,10 +172,19 @@ export class AppStack extends cdk.Stack {
               new cdk.aws_iam.PolicyStatement({
                 actions: [
                   'logs:CreateLogGroup',
+                ],
+                resources: [
+                  `arn:aws:logs:${awsRegion}:${awsAccountId}:*`
+                ],
+              }),
+              new cdk.aws_iam.PolicyStatement({
+                actions: [
                   'logs:CreateLogStream',
                   'logs:PutLogEvents'
                 ],
-                resources: ['*'],
+                resources: [
+                  `arn:aws:logs:${awsRegion}:${awsAccountId}:log-group:/aws/lambda/GenerateFinalPromptLambda-${props.randomPrefix}:*`
+                ],
               }),
               new cdk.aws_iam.PolicyStatement({
                 actions: [
