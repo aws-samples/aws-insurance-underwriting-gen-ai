@@ -1,7 +1,7 @@
 # Underwriting Validation using Amazon Bedrock and AWS Step Functions
 
 Underwriting validation process with Generative AI and Retrieval Augmented Generating (RAG) using Amazon Bedrock and AWS Step Functions. 
-This repository is an addition to [this](https://aws.amazon.com/blogs/machine-learning/streamline-insurance-underwriting-with-generative-ai-using-amazon-bedrock-part-1/) AWS blog post.
+This repository is an addition to [this](https://aws.amazon.com/blogs/machine-learning/streamline-insurance-underwriting-with-generative-ai-using-amazon-bedrock-part-1/) companion AWS blog post, which offers additional context and details.
 
 > [!IMPORTANT]
 > Upload your underwriting manual document to the [underwriting-manual](./assets/underwriting-manual/) directory after you clone the repo.
